@@ -50,8 +50,19 @@ class Question
     end
 
     def author
-
+        names = QuestionsDBConnection.instance.execute(<<-SQL, associated_author_id)
+        SELECT fname,lname
+        FROM users
+        WHERE id = ?
+    SQL
+        fname,lname = names.first.values
+        "#{fname} #{lname}"
     end
+
+    def replies
+        Reply.find_by_question_id(@id)
+    end
+
 end
 
 class User
@@ -176,7 +187,38 @@ class Reply
         @author_id = options['author_id']
         @parent_reply_id = options['parent_reply_id']
         @body = options['body']
-    end    
+    end
+    
+    def author
+        names = QuestionsDBConnection.instance.execute(<<-SQL, author_id)
+            SELECT fname,lname
+            FROM users
+            WHERE id = ?
+
+        SQL
+            fname,lname = names.first.values
+            "#{fname} #{lname}"
+    end
+
+    def question
+        Question.find_by_question_id(@question_id)
+    end
+
+    def parent_reply
+        Reply.find_by_id(@parent_reply_id)
+    end
+
+    def child_replies
+        parent_id = @id
+        replies = QuestionsDBConnection.instance.execute(<<-SQL, parent_id)
+            SELECT *
+            FROM replies
+            WHERE parent_reply_id = ? 
+        SQL
+        return nil if replies.empty?
+        replies
+    end
+
 end
 
 
